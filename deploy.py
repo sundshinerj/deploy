@@ -35,19 +35,12 @@ url = 'ftp地址'
 user = '用户名'
 passwd = '密码'
 #mail
-<<<<<<< HEAD
 mail_list = ["email地址"]
 mail_host = "邮箱smtp服务器地址"
 mail_user = "用户名"
 mail_passwd = "密码"
 mail_postfix = "域名" #例：myemail.com
-=======
-mail_list = ["你的email地址"]
-mail_host = "smtp服务器"
-mail_user = "用户名"
-mail_passwd = "密码"
-mail_postfix = "域名" #如：myemail.com
->>>>>>> 5bfc689a0bc96658ec16fa9407c4f79304b75785
+
 
 #必须为root帐户才能执行该脚本
 if os.geteuid() != 0:
