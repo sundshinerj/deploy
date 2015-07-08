@@ -31,15 +31,15 @@ now_t = time.strftime('%y%m%d%H%M%S')
 now = time.strftime('%y%m%d%H%M%S')
 Path = '/tmp/deploy'
 #ftpserver
-url = '172.26.1.158'
-user = 'wbc'
-passwd = 'wbc123'
+url = 'ftp地址'
+user = '用户名'
+passwd = '密码'
 #mail
-mail_list = ["duanruijun@troila.com"]
-mail_host = "172.26.1.254"
-mail_user = "duanruijun"
-mail_passwd = "20150206"
-mail_postfix = "troila.com"
+mail_list = ["email地址"]
+mail_host = "邮箱smtp服务器地址"
+mail_user = "用户名"
+mail_passwd = "密码"
+mail_postfix = "域名" #例：myemail.com
 
 #必须为root帐户才能执行该脚本
 if os.geteuid() != 0:
