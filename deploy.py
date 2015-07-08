@@ -10,6 +10,7 @@
 __author__ = 'sundshinerj'
 
 import re
+import socket
 import os
 import time
 import urllib
@@ -23,8 +24,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 tomcat_path = '/usr/local/apache-tomcat-7.0.26'
-IpCommd = "/sbin/ifconfig | grep 'inet addr:'|awk 'NR==1{print $2}'|awk -F: '{print $2}'"
-Ip = cmd.getstatusoutput(IpCommd)[1]
+hostname = socket.gethostname()
 TomcatShutdown = "/bin/kill `ps aux | /bin/grep -w apache-tomcat | /bin/grep -v grep | /usr/bin/awk '{print $2}'`"
 TomcatStart = '/bin/sh ' + tomcat_path + '/bin/startup.sh>/dev/null'
 now_t = time.strftime('%y%m%d%H%M%S')
@@ -56,7 +56,7 @@ for dir in log_dirs:
     else:
         os.makedirs('/tmp/deploy/' + dir)
 
-file = open(Path + '/logs/' + Ip + '.log', 'a')
+file = open(Path + '/logs/' + hostname + '.log', 'a')
 os.chdir('/tmp/deploy/file')
 #下载项目包
 def download_war():
@@ -127,15 +127,15 @@ def war_up():
 
 #定义邮件内容
 def send_mail(to_list,sub,content):
-    me="ROOT"+"<"+mail_user+"@"+mail_postfix+">"
+    me = "ROOT" + "<" + mail_user + "@" + mail_postfix + ">"
     #msg = MIMEText(content,_charset='gbk')
     msg = MIMEMultipart('related')
     msg['Subject'] = sub
     msg['From'] = me
     msg['To'] = ";".join(to_list)
-    att = MIMEText(open(Path + '/logs/' + Ip + '.log', 'rb').read(), 'base64', 'utf-8')
+    att = MIMEText(open(Path + '/logs/' + hostname + '.log', 'rb').read(), 'base64', 'utf-8')
     att["Content-Type"] = 'application/octet-stream'
-    att["Content-Disposition"] = 'attachment; filename="' + Ip + 'ErrorLog.log"'
+    att["Content-Disposition"] = 'attachment; filename="' + hostname + 'ErrorLog.log"'
     msg.attach(att)
     try:
         s = smtplib.SMTP()
