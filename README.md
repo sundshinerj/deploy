@@ -1,2 +1,6 @@
-# deploy
-tomcat deploy for python
+# 欢迎使用tomcat部署脚本 
+*目的*
+为了解决不同war包部署而整合的一个脚本
+*功能*
+1.根据本地tomcat包的不同从ftp服务器上下载相应的版本包
+2.如在部署当中有问题则email通知相关人员
