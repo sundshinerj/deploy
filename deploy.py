@@ -1,5 +1,5 @@
 #coding: utf-8
-#version:2.1
+#version:2.2
 
 '''
 功能:
@@ -23,25 +23,22 @@ import commands as cmd
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-tomcat_path = '/usr/local/apache-tomcat-7.0.26'
+tomcat_path = 'tomcat路径'   #如：/usr/local/apache-tomcat-7.0.26,注意：最后不能有“/”
 hostname = socket.gethostname()
 TomcatShutdown = "/bin/kill `ps aux | /bin/grep -w apache-tomcat | /bin/grep -v grep | /usr/bin/awk '{print $2}'`"
 TomcatStart = '/bin/sh ' + tomcat_path + '/bin/startup.sh>/dev/null'
-now_t = time.strftime('%y%m%d%H%M%S')
 now = time.strftime('%y%m%d%H%M%S')
 Path = '/tmp/deploy'
 #ftpserver
 url = 'ftp地址'
-user = '用户名'
-passwd = '密码'
+user = '用户名' #ftp-user
+passwd = '密码' #ftp-passwd
 #mail
-mail_list = ["email地址"]
-mail_host = "邮箱smtp服务器地址"
-mail_user = "用户名"
-mail_passwd = "密码"
-mail_postfix = "域名" #例：myemail.com
-
-
+mail_list = ["邮件联系人"]  #多个以逗号隔开，如：["user1@test.com","user2@test.com"]
+mail_host = "邮箱smtp服务器地址" #也可以写ip
+mail_user = "发件人用户名"
+mail_passwd = "发件人密码"
+mail_postfix = "发件邮箱域名"  #如：myemail.com
 #必须为root帐户才能执行该脚本
 if os.geteuid() != 0:
     file.writelines("[" + now + "]" + " This program must be run as root.Aborting.")
@@ -110,12 +107,14 @@ def war_up():
         a = re.search('^ERROR -',i)
         if a is not None:
             file.writelines("\n" + "[" + now + "]" + ' start server Error,sendmaill to admin\n')
-            os.system()
+            #os.system()
             file.writelines("\n" + "[" + now + "]" + ' Deploy is not successful!\n')
+            file.writelines(log_file)
             print 'script_result: False'
-            Str = "IP:%s\nServer:$s\nPlease open the Attachment"
-            send_mail(mailto_list,"deploy_Error",Str)
+            Str = "Server:%s\nPlease open the Attachment" % hostname
+            send_mail(mail_list,"deploy_Error",Str)
             sys.exit()
+            file.close()
     else:
         #os.system('/bin/sh '+tomcat_path+'bin/shutdown.sh>/dev/null')
         os.system(TomcatShutdown)
@@ -141,7 +140,7 @@ def send_mail(to_list,sub,content):
     try:
         s = smtplib.SMTP()
         s.connect(mail_host)
-        s.login(mail_user,mail_pass)
+        s.login(mail_user,mail_passwd)
         s.sendmail(me, to_list, msg.as_string())
         s.close()
         return True
