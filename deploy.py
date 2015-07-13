@@ -30,7 +30,7 @@ from email.mime.multipart import MIMEMultipart
 #定义相关变量参数
 Way_list = []  #初使化war列表
 Tomcat_path = '/usr/local/apache-tomcat-7.0.26'  #指定tomcat路径(最后不能有“/”)
-Hostname = socket.getHostname()  #设置主机唯一标识
+Hostname = socket.gethostname()  #设置主机唯一标识
 Tomcatshutdown = "/bin/kill `ps aux | /bin/grep -w apache-tomcat | /bin/grep -v grep | /usr/bin/awk '{print $2}'`"  #关闭tomcat
 Tomcatstart = '/bin/sh ' + Tomcat_path + '/bin/startup.sh>/dev/null'  #启动tomcat
 Now = time.strftime('%y%m%d%H%M%S')  #获取当前时间
