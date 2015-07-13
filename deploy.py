@@ -2,13 +2,16 @@
 #version:2.2
 
 '''
-功能:
-    1、可根据当前运行在tomcat下的所有项目进行判断、部署。
-    2、部署更新后，如有问题可通过Email告知相关人员。
+说明
+1、为方便运维部署特编写此脚本
+2、针对tomcat本地war包并从FTP服务器上获取相关资源
+3、部署期间，如有问题刚Email相关人员
 '''
 
 __author__ = 'sundshinerj'
 
+
+#导入相关模块
 import re
 import socket
 import os
@@ -23,29 +26,33 @@ import commands as cmd
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-tomcat_path = 'tomcat路径'   #如：/usr/local/apache-tomcat-7.0.26,注意：最后不能有“/”
-hostname = socket.gethostname()
-TomcatShutdown = "/bin/kill `ps aux | /bin/grep -w apache-tomcat | /bin/grep -v grep | /usr/bin/awk '{print $2}'`"
-TomcatStart = '/bin/sh ' + tomcat_path + '/bin/startup.sh>/dev/null'
-now = time.strftime('%y%m%d%H%M%S')
-Path = '/tmp/deploy'
-#ftpserver
-url = 'ftp地址'
-user = '用户名' #ftp-user
-passwd = '密码' #ftp-passwd
-#mail
-mail_list = ["邮件联系人"]  #多个以逗号隔开，如：["user1@test.com","user2@test.com"]
-mail_host = "邮箱smtp服务器地址" #也可以写ip
-mail_user = "发件人用户名"
-mail_passwd = "发件人密码"
-mail_postfix = "发件邮箱域名"  #如：myemail.com
+
+#定义相关变量参数
+Way_list = []  #初使化war列表
+Tomcat_path = '/usr/local/apache-tomcat-7.0.26'  #指定tomcat路径(最后不能有“/”)
+Hostname = socket.getHostname()  #设置主机唯一标识
+Tomcatshutdown = "/bin/kill `ps aux | /bin/grep -w apache-tomcat | /bin/grep -v grep | /usr/bin/awk '{print $2}'`"  #关闭tomcat
+Tomcatstart = '/bin/sh ' + Tomcat_path + '/bin/startup.sh>/dev/null'  #启动tomcat
+Now = time.strftime('%y%m%d%H%M%S')  #获取当前时间
+Path = '/tmp/deploy'  #定义临时目录
+Ftp_url = 'ftp地址'  #ftp地址
+Ftp_u = 'ftp用户'  #用户
+Ftp_p = 'ftp密码'  #密码
+Mail_list = ['user1@test.com'] #邮件收件人列表，多个以逗号隔开。如：['user1@myemail.com','user2@myemail2.com']
+Mail_host = 'smtp.test.com'  #发件箱地址
+Mail_u = 'testuser'  #发件人
+Mail_p = '123456'   #发件人密码
+Mail_postfix = 'test.com' #如：邮箱域名
+
+
 #必须为root帐户才能执行该脚本
 if os.geteuid() != 0:
-    file.writelines("[" + now + "]" + " This program must be run as root.Aborting.")
+    file.writelines("[" + Now + "]" + " This program must be run as root.Aborting.")
     file.close()
     sys.exit()
 
-#如果没有日志目录就创建
+    
+#创建相关目录
 log_dirs = ['logs', 'file', 'bak']
 for dir in log_dirs:
     if os.path.exists('/tmp/deploy/' + dir):
@@ -54,112 +61,105 @@ for dir in log_dirs:
     else:
         os.makedirs('/tmp/deploy/' + dir)
 
-file = open(Path + '/logs/' + hostname + '.log', 'a')
+#打开日志文件并记录相关内容        
+file = open(Path + '/logs/' + Hostname + '.log', 'a')
 os.chdir('/tmp/deploy/file')
-#下载项目包
+
+
+#下载操作
 def download_war():
-    file.writelines("\n"+"[" + now + "]" + ' download now...\n')
-    #从FTP上下载包
-    ftp = ftplib.FTP(url)
-    ftp.login(user, passwd)
-    for war in war_lst:
+    file.writelines("\n"+"[" + Now + "]" + " download Now...\n")
+    ftp = ftplib.FTP(Ftp_url)
+    ftp.login(Ftp_u, Ftp_p)
+    for war in Way_list:
         War = '/tmp/deploy/file/' + war
         try:
-            fp = open(War, 'wb')
-            ftp.retrbinary('RETR ' + war, fp.write)
-            file.writelines("\n" + "[" + now + "]" + ' ' + war + ' is download\n')
+            fp = open(War, "wb")
+            ftp.retrbinary("RETR " + war, fp.write)
+            file.writelines("\n" + "[" + Now + "]" + " " + war + " is download\n")
             fp.close()
         except Exception:
             os.remove(War)
-            file.writelines("\n" + "[" + now + "]" + ' no ' + war + ' on Ftp Server\n')
+            file.writelines("\n" + "[" + Now + "]" + " no " + war + " on Ftp Server\n")
             fp.close()
     ftp.quit()
-
     if not os.listdir('/tmp/deploy/file/'):
-        file.writelines("\n" + "[" + now + "]" + ' On the server without any of the available packages\n')
+        file.writelines("\n" + "[" + Now + "]" + " On the server without any of the available packages\n")
         file.close()
         print "script_result: False"
     else:
         war_up()
-
-#更新项目包
+        
+#更新war
 def war_up():
-    file.writelines("\n" + "[" + now + "]" + ' update server...\n')
-    tomcat_log = tomcat_path + '/logs/catalina.out'
-    os.system(TomcatShutdown)
-    tomcat_log_bak = tomcat_log + now
-    shutil.move(tomcat_log, tomcat_log_bak)
-    
+    file.writelines("\n" + "[" + Now + "]" + ' update server...\n')
+    tomcat_log = Tomcat_path + '/logs/catalina.out'
+    os.system(Tomcatshutdown)
+    tomcat_log_bak = tomcat_log + Now
+    shutil.move(tomcat_log, tomcat_log_bak)    
     for war in os.listdir('/tmp/deploy/file'):
         warfile = war.split('.')[0]
-        shutil.rmtree(tomcat_path + '/webapps/' + warfile)
-        shutil.move(tomcat_path + '/webapps/' + war, '/tmp/deploy/bak/')
-        shutil.move('/tmp/deploy/file/' + war, tomcat_path + '/webapps/')
-    
-    if os.path.exists(tomcat_path+'work/Catalina'):
-        shutil.rmtree(tomcat_path+'work/Catalina')
-        
-    os.system(TomcatStart)
-    file.writelines("\n" + "[" + now + "]" + ' startup tomcat...\n')
+        shutil.rmtree(Tomcat_path + '/webapps/' + warfile)
+        shutil.move(Tomcat_path + '/webapps/' + war, '/tmp/deploy/bak/')
+        shutil.move('/tmp/deploy/file/' + war, Tomcat_path + '/webapps/')    
+    if os.path.exists(Tomcat_path+'work/Catalina'):
+        shutil.rmtree(Tomcat_path+'work/Catalina')
+    os.system(Tomcatstart)
+    file.writelines("\n" + "[" + Now + "]" + " startup tomcat...\n")
     time.sleep(10)
-    log_file = open(tomcat_log,'rb').readlines()
+    log_file = open(tomcat_log,"rb").readlines()
     for i in log_file:
         a = re.search('^ERROR -',i)
         if a is not None:
-            file.writelines("\n" + "[" + now + "]" + ' start server Error,sendmaill to admin\n')
-            #os.system()
-            file.writelines("\n" + "[" + now + "]" + ' Deploy is not successful!\n')
+            file.writelines("\n" + "[" + Now + "]" + " start server Error,sendmaill to admin\n")
+            file.writelines("\n" + "[" + Now + "]" + " Deploy is not successful!\n")
             file.writelines(log_file)
-            print 'script_result: False'
-            Str = "Server:%s\nPlease open the Attachment" % hostname
-            send_mail(mail_list,"deploy_Error",Str)
-            sys.exit()
+            print "script_result: False"
             file.close()
+            Str = "Server:%s\nPlease open the Attachment" % Hostname
+            send_mail(Mail_list,"deploy_Error",Str)
+            sys.exit()            
     else:
-        #os.system('/bin/sh '+tomcat_path+'bin/shutdown.sh>/dev/null')
-        os.system(TomcatShutdown)
+        os.system(Tomcatshutdown)
         shutil.move(tomcat_log_bak,tomcat_log)
-        os.chdir(tomcat_path + '/webapps')
-        os.system(TomcatStart)
-        file.writelines("\n" + "[" + now + "]" + ' Deploy is successful!\n')
+        os.chdir(Tomcat_path + '/webapps')
+        os.system(Tomcatstart)
+        file.writelines("\n" + "[" + Now + "]" + " Deploy is successful!\n")
         file.close()
-        print 'script_result: True'
-
+        print "script_result: True"
+        
 #定义邮件内容
 def send_mail(to_list,sub,content):
-    me = "ROOT" + "<" + mail_user + "@" + mail_postfix + ">"
-    #msg = MIMEText(content,_charset='gbk')
+    me = "ROOT" + "<" + Mail_u + "@" + Mail_postfix + ">"
     msg = MIMEMultipart('related')
     msg['Subject'] = sub
     msg['From'] = me
     msg['To'] = ";".join(to_list)
-    att = MIMEText(open(Path + '/logs/' + hostname + '.log', 'rb').read(), 'base64', 'utf-8')
+    att = MIMEText(open(Path + '/logs/' + Hostname + '.log', 'rb').read(), 'base64', 'utf-8')
     att["Content-Type"] = 'application/octet-stream'
-    att["Content-Disposition"] = 'attachment; filename="' + hostname + 'ErrorLog.log"'
+    att["Content-Disposition"] = 'attachment; filename="' + Hostname + 'ErrorLog.log"'
     msg.attach(att)
     try:
         s = smtplib.SMTP()
-        s.connect(mail_host)
-        s.login(mail_user,mail_passwd)
+        s.connect(Mail_host)
+        s.login(Mail_u,Mail_p)
         s.sendmail(me, to_list, msg.as_string())
         s.close()
         return True
     except Exception, e:
         print str(e)
         return False
-
-
-#如果True，就执行download_war
-s = os.listdir(tomcat_path + '/webapps')
-war_lst = []
-for i in s:
-    if i.endswith('.war'):
-        war_lst.append(i)
-if war_lst:
-    download_war()
-else:
-    file.writelines("\n" + "[" + now + "]" + "  The local war didn't find it\n")
-    file.close()
-    print "script_result: False"
-    sys.exit()
-
+    
+    
+if __name__ == '__main__':
+    s = os.listdir(Tomcat_path + '/webapps')
+    for i in s:
+        if i.endswith('.war'):
+            Way_list.append(i)
+    if Way_list:
+        download_war()
+    else:
+        file.writelines("\n" + "[" + Now + "]" + "  The local war didn't find it\n")
+        file.close()
+        print "script_result: False"
+        sys.exit()
