@@ -5,7 +5,7 @@
 说明
 1、为方便运维部署特编写此脚本
 2、针对tomcat本地war包并从FTP服务器上获取相关资源
-3、部署期间，如有问题则Email相关人员
+3、部署期间，如有问题刚Email相关人员
 '''
 
 __author__ = 'sundshinerj'
@@ -29,20 +29,21 @@ from email.mime.multipart import MIMEMultipart
 
 #定义相关变量参数
 Way_list = []  #初使化war列表
-Tomcat_path = '/usr/local/apache-tomcat-7.0.26'  #指定tomcat路径(最后不能有“/”)
-Hostname = socket.gethostname()  #设置主机唯一标识
-Tomcatshutdown = "/bin/kill `ps aux | /bin/grep -w apache-tomcat | /bin/grep -v grep | /usr/bin/awk '{print $2}'`"  #关闭tomcat
+Tomcat_path = '/usr/local/apache-tomcat-7.0.26'  #tomcat路径(最后不能有“/”)
+tomcat_name = Tomcat_path.split('/')[-1]
+Hostname = socket.gethostname()  #主机唯一标识
+Tomcatshutdown = "/bin/kill `ps aux | /bin/grep -w " + tomcat_name + " | /bin/grep -v grep | /usr/bin/awk '{print $2}'`"  #关闭tomcat
 Tomcatstart = '/bin/sh ' + Tomcat_path + '/bin/startup.sh>/dev/null'  #启动tomcat
 Now = time.strftime('%y%m%d%H%M%S')  #获取当前时间
 Path = '/tmp/deploy'  #定义临时目录
-Ftp_url = 'ftp地址'  #ftp地址
-Ftp_u = 'ftp用户'  #用户
-Ftp_p = 'ftp密码'  #密码
-Mail_list = ['user1@test.com'] #邮件收件人列表，多个以逗号隔开。如：['user1@myemail.com','user2@myemail2.com']
-Mail_host = 'smtp.test.com'  #发件箱地址
-Mail_u = 'testuser'  #发件人
-Mail_p = '123456'   #发件人密码
-Mail_postfix = 'test.com' #如：邮箱域名
+Ftp_url = '172.26.1.158'  #ftp地址
+Ftp_u = 'wbc'  #用户
+Ftp_p = 'wbc123'  #密码
+Mail_list = ['duanruijun@troila.com','majun@troila.com'] #邮件收件人列表，多个以逗号隔开。如：['user1@myemail.com','user2@myemail2.com']
+Mail_host = '172.26.1.254'  #发件箱地址
+Mail_u = 'duanruijun'  #发件人姓名
+Mail_p = '20150206'  #发件人密码
+Mail_postfix = 'troila.com' #邮箱域名
 
 
 #必须为root帐户才能执行该脚本
@@ -109,13 +110,18 @@ def war_up():
     time.sleep(10)
     log_file = open(tomcat_log,"rb").readlines()
     for i in log_file:
-        a = re.search('^ERROR -',i)
+        a = re.search('^ERROR -', i)
         if a is not None:
             file.writelines("\n" + "[" + Now + "]" + " start server Error,sendmaill to admin\n")
             file.writelines("\n" + "[" + Now + "]" + " Deploy is not successful!\n")
-            file.writelines(log_file)
+            file.writelines(log_file)            
             print "script_result: False"
             file.close()
+            os.system(Tomcatshutdown)
+            shutil.move(tomcat_log_bak,tomcat_log)
+            shutil.move(Tomcat_path + '/webapps/' + war, '/tmp/deploy/file/')
+            shutil.move('/tmp/deploy/bak/' + war, Tomcat_path + '/webapps/')
+            os.system(Tomcatstart)
             Str = "Server:%s\nPlease open the Attachment" % Hostname
             send_mail(Mail_list,"deploy_Error",Str)
             sys.exit()            
